@@ -116,6 +116,7 @@ EOF
         --data-binary @request.json \
         ${request_url}
     )
+    do_curl_status=$?
 
     rm -f request.json
 
@@ -126,7 +127,7 @@ EOF
         return instantiate_fabric_chaincode $@
     fi
 
-    if [ $? -eq 1 ]
+    if [ $do_curl_status -eq 1 ]
     then
         echo "Failed to instantiate fabric contract:"
         if [[ "${OUTPUT}" == *"version already exists for chaincode"* ]]
@@ -148,8 +149,12 @@ EOF
 function parse_fabric_config {
     NET_CONFIG_FILE=$1
 
+    echo "Parsing deployment configuration:"
+    cat $NET_CONFIG_FILE
+
     for org in $(jq -r "to_entries[] | .key" $NET_CONFIG_FILE)
     do
+        echo "Targeting org '$org'..."
         authenticate_org $org
 
         cc_index=0
@@ -164,7 +169,7 @@ function parse_fabric_config {
 
             # TODO: Integrate with configuration
             CC_ID="${CC_NAME}"
-            CC_VERSION=$(date +%Y%m%d)
+            CC_VERSION=$(date '+%Y%m%d%H%M%S')
 
             if [ $CC_INSTALL ]
             then
@@ -186,4 +191,6 @@ function parse_fabric_config {
             cc_index=$((cc_index + 1))
         done
     done
+
+    echo "Done parsing deployment configuration."
 }
