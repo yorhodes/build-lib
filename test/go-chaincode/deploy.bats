@@ -24,12 +24,11 @@ setup() {
 
 @test "deploy.sh: should succeed if deploy configuration exists" {
     export CONFIG_PATH=$(mktemp)
-    echo $CONFIG_PATH
-
-    stub install_jq
-    stub setup_service_constants
-    stub provision_blockchain
-    stub parse_fabric_config "${CONFIG_PATH} : true"
+    
+    stub install_jq "true"
+    stub setup_service_constants "true"
+    stub provision_blockchain "true"
+    stub parse_fabric_config "true"
 
     run "${SCRIPT_DIR}/go-chaincode/deploy.sh"
     [ $status -eq 0 ]

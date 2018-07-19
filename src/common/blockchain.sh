@@ -64,19 +64,30 @@ function install_fabric_chaincode {
 
     request_url="${BLOCKCHAIN_URL}/api/v1/networks/${BLOCKCHAIN_NETWORK_ID}/chaincode/install"
 
+    echo "Installing fabric contract '$CC_FILE' with id '$CC_ID' and version '$CC_VERSION'..."
+
     OUTPUT=$(do_curl \
         -X POST \
         -u ${BLOCKCHAIN_KEY}:${BLOCKCHAIN_SECRET} \
         -F files[]=@${CC_FILE} -F chaincode_id=${CC_ID} -F chaincode_version=${CC_VERSION} \
         ${request_url})
-    if ! ${OUTPUT}
+    
+    if [ $? -eq 1 ]
     then
-        if [[ "${OUTPUT}" != *"chaincode code"*"exists"* ]]
+        echo "Failed to install fabric contract:"
+        if [[ "${OUTPUT}" == *"chaincode code"*"exists"* ]]
         then
-            echo failed to install fabric contract
-            exit 1
-        fi
+            echo "Chaincode already installed with id '${CC_ID}' and version '${CC_VERSION}'"
+            return 2
+        else
+            echo "Unrecognized error returned:"
+            echo $OUTPUT
+            return 1
+        fi  
     fi
+
+    echo "Successfully installed fabric contract."
+    return 0
 }
 
 function instantiate_fabric_chaincode {
@@ -95,30 +106,42 @@ EOF
 
     request_url="${BLOCKCHAIN_URL}/api/v1/networks/${BLOCKCHAIN_NETWORK_ID}/channels/${CHANNEL}/chaincode/instantiate"
 
-    OUTPUT=$(do_curl \
+    echo "Instantiating fabric contract with id '$CC_ID' and version '$CC_VERSION' on channel '$CHANNEL' with arguments '$INIT_ARGS'..."
+
+    OUTPUT=$(
+    do_curl \
         -X POST \
         -H 'Content-Type: application/json' \
         -u ${BLOCKCHAIN_KEY}:${BLOCKCHAIN_SECRET} \
         --data-binary @request.json \
-        ${request_url})
+        ${request_url}
+    )
 
-    while ! ${OUTPUT}
-    do
-        if [[ "${OUTPUT}" = *"Failed to establish a backside connection"* ]]
-        then
-            sleep 30
-        elif [[ "${OUTPUT}" = *"premature execution"* ]]
-        then
-            sleep 30
-        elif [[ "${OUTPUT}" = *"version already exists for chaincode"* ]]
-        then
-            break
-        else
-            echo failed to start fabric contract
-            exit 1
-        fi
-    done
     rm -f request.json
+
+    if [[ "${OUTPUT}" == *"Failed to establish a backside connection"* || "${OUTPUT}" == *"premature execution"* ]]
+    then
+        sleep 30
+        # Make recursive call after timeout for connection/premature execution errors
+        return instantiate_fabric_chaincode $@
+    fi
+
+    if [ $? -eq 1 ]
+    then
+        echo "Failed to instantiate fabric contract:"
+        if [[ "${OUTPUT}" == *"version already exists for chaincode"* ]]
+        then
+            echo "Chaincode instance already exists with id '${CC_ID}' and version '${CC_VERSION}'"
+            return 2
+        else
+            echo "Unrecognized error returned:"
+            echo "${OUTPUT}"
+            return 1
+        fi
+    fi
+
+    echo "Successfully instantiated fabric contract."
+    return 0
 }
 
 
@@ -140,19 +163,23 @@ function parse_fabric_config {
             CC_INIT_ARGS=$(jq ".${org}.chaincode[$index].init_args[]" $NET_CONFIG_FILE)
 
             # TODO: Integrate with configuration
-            CC_ID="id_placeholder"
-            CC_VERSION=$(date +%Y%m%d)-${BUILD_NUMBER}
+            CC_ID="${CC_NAME}"
+            CC_VERSION=$(date +%Y%m%d)
 
             if [ $CC_INSTALL ]
             then
                 install_fabric_chaincode $CC_ID $CC_VERSION $CC_FILE
+                
+                # If install failed due to a reason other than an identical version already exists, skip instantiate
+                if [ $? -eq 1 ]; then
+                    continue
+                fi
             fi
 
             if [ $CC_INSTANTIATE ]
             then
                 for channel in $CC_CHANNELS
                 do
-                    echo CHANNEL: $channel
                     instantiate_fabric_chaincode $CC_ID $CC_VERSION $channel $CC_INIT_ARGS
                 done  
             fi

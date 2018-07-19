@@ -17,6 +17,7 @@ function do_curl {
     then
         return 0
     else
-        return ${HTTP_STATUS}
+        # limit error response integer
+        return 1
     fi
 }
