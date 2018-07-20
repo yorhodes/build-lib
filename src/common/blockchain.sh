@@ -5,6 +5,7 @@
 source "${SCRIPT_DIR}/common/utils.sh"
 
 function setup_service_constants {
+    set -x
     region_instance=$(echo $REGION_ID | cut -d : -f 2)
     if [ "${region_instance}" = "ys1" ]; then
         export BLOCKCHAIN_SERVICE_NAME=ibm-blockchain-5-staging
@@ -18,6 +19,7 @@ function setup_service_constants {
 }
 
 function authenticate_org {
+    set -x
     org=$1
 
     # TODO: Debug JQ with underscore keys
@@ -29,6 +31,7 @@ function authenticate_org {
 }
 
 function provision_blockchain {
+    set -x
     if ! cf service ${BLOCKCHAIN_SERVICE_INSTANCE} > /dev/null 2>&1
     then
         cf create-service ${BLOCKCHAIN_SERVICE_NAME} ${BLOCKCHAIN_SERVICE_PLAN} ${BLOCKCHAIN_SERVICE_INSTANCE}
@@ -41,6 +44,7 @@ function provision_blockchain {
 }
 
 function get_blockchain_connection_profile_inner {
+    set -x
     do_curl \
         -H 'Content-Type: application/json' \
         -H 'Accept: application/json' \
@@ -49,6 +53,7 @@ function get_blockchain_connection_profile_inner {
 }
 
 function get_blockchain_connection_profile {
+    set -x
     get_blockchain_connection_profile_inner
     while ! jq -e ".channels.defaultchannel" blockchain-connection-profile.json
     do
@@ -58,6 +63,7 @@ function get_blockchain_connection_profile {
 }
 
 function install_fabric_chaincode {
+    set -x
     CC_ID=$1
     CC_VERSION=$2
     CC_FILE=$3
@@ -91,6 +97,7 @@ function install_fabric_chaincode {
 }
 
 function instantiate_fabric_chaincode {
+    set -x
     CC_ID=$1
     CC_VERSION=$2
     CHANNEL=$3
@@ -147,6 +154,7 @@ EOF
 
 
 function parse_fabric_config {
+    set -x
     NET_CONFIG_FILE=$1
 
     echo "Parsing deployment configuration:"
