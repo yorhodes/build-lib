@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -x 
+
 ROOTDIR=${ROOTDIR:=$PWD}
 
 export GO_VERSION=${GO_VERSION:="1.9.2"}
