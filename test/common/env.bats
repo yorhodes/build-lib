@@ -19,7 +19,6 @@ setup() {
 
   echo $output
   [ $status -eq 0 ]
-
 }
 
 @test "env.sh: should accept non-default values" {
@@ -28,6 +27,7 @@ setup() {
   GO_VERSION="1.0.0"
   HLF_VERSION="2.0.0"
   CONFIGPATH="path"
+  DEBUG=true
 
   source "${SCRIPT_DIR}/common/env.sh"
 
@@ -37,7 +37,7 @@ setup() {
   [ "${HLF_VERSION}" = "2.0.0" ]
   [ "${FABRIC_SRC_DIR}" = "test/fabric-2.0.0" ]
   [ "${CONFIGPATH}" = "path" ]
-
+  [ "${DEBUG}" = true ]
 }
 
 @test "env.sh: should accept default values" {
@@ -50,5 +50,5 @@ setup() {
   [ "${GO_VERSION}" = "1.9.2" ]
   [ "${HLF_VERSION}" = "1.0.4" ]
   [ "${FABRIC_SRC_DIR}" = "${PWD}/fabric-1.0.4" ]
-
+  [ "${DEBUG}" = false ]
 }

@@ -9,6 +9,8 @@ source "${SCRIPT_DIR}/common/utils.sh"
 # shellcheck source=src/common/blockchain.sh
 source "${SCRIPT_DIR}/common/blockchain.sh"
 
+$DEBUG && set -x
+
 if [[ ! -f $CONFIGPATH ]]; then
   echo "No deploy configuration at specified path: ${CONFIGPATH}"
   exit 1
@@ -18,3 +20,5 @@ install_jq
 setup_service_constants
 provision_blockchain
 deploy_fabric_chaincode $CONFIGPATH
+
+
